@@ -1,0 +1,36 @@
+Source: xamine
+Priority: optional
+Maintainer: Josh Triplett <josh@freedesktop.org>
+Build-Depends: cdbs, debhelper (>= 4.0.0), libxml2-dev
+Standards-Version: 3.6.1
+
+Package: libxamine-dev
+Section: libdevel
+Architecture: any
+Depends: libxamine0 (= ${Source-Version})
+Description: X Window System protocol analysis library, development files
+ Xamine is a protocol analysis library for the X Window System protocol, based
+ on XML-XCB protocol descriptions.  Given a binary X protocol stream, Xamine
+ can reconstruct the structured tree of requests, replies, events, and errors.
+ .
+ Xamine is under heavy development; the functionality and interface are
+ subject to change.
+ .
+ This package contains the header and library files needed to build software
+ using libXamine.
+
+Package: libxamine0
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: fd.o-xcb-proto
+Description: X Window System protocol analysis library
+ Xamine is a protocol analysis library for the X Window System protocol, based
+ on XML-XCB protocol descriptions.  Given a binary X protocol stream, Xamine
+ can reconstruct the structured tree of requests, replies, events, and errors.
+ .
+ Xamine is under heavy development; the functionality and interface are
+ subject to change.
+ .
+ This package contains the library files needed to run software using
+ libXamine.

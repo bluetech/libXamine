@@ -1,0 +1,10 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: libXamine
+Description: Library to dissect binary X Window System protocol streams
+Version: @PACKAGE_VERSION@
+Libs: -L${libdir} @LIBS@
+Cflags: -I${includedir}

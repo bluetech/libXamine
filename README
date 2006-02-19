@@ -1,0 +1,21 @@
+Xamine is a protocol analysis library for the X Window System protocol, based
+on XML-XCB protocol descriptions.  Given a binary X protocol stream, Xamine
+can reconstruct the structured tree of requests, replies, events, and errors.
+
+Xamine is under heavy development; the functionality and interface are subject
+to change.
+
+Currently, Xamine only handles X events.  All the code to parse an arbitrary
+description is available (though the appropriate hooks are needed to handle
+some additional top-level XML tags such as request and error and pass the
+contents to the structure-field-handling functions); the main task required to
+handle requests and replies is the code which follows those requests and
+replies in the stream, finds the appropriate XamineDescription based on the
+major/minor number and a reply hash (much like XCB's mechanism), and uses that
+for parsing.
+
+The biggest limitation right now is that the caller must determine the size of
+the data to pass to Xamine's parsing functions; this should definitely be
+fixed, and users of the Xamine library should be able to pass arbitrary
+amounts of data to Xamine until enough is available to provide parsed
+structures.
