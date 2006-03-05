@@ -275,7 +275,7 @@ XaminedItem *xamine(XamineConversation *conversation, XamineDirection dir,
         return NULL;
 
     /* Dissect the data based on the definition. */
-    int offset = 0;
+    unsigned int offset = 0;
     return xamine_definition(conversation, &data, &size, &offset,
                              definition, NULL);
 }
