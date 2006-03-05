@@ -81,6 +81,7 @@ static const XamineDefinition core_type_definitions[] =
 
 static char *xamine_xml_get_prop(xmlNodePtr node, const char *name);
 static char *xamine_xml_get_node_name(xmlNodePtr node);
+static char *xamine_xml_get_node_content(xmlNodePtr node);
 static void xamine_parse_xmlxcb_file(XamineState *state, char *filename);
 static char* xamine_make_name(XamineExtension *extension, char *name);
 static XamineDefinition *xamine_find_type(XamineState *state, char *name);
@@ -302,6 +303,12 @@ static char *xamine_xml_get_prop(xmlNodePtr node, const char *name)
 static char *xamine_xml_get_node_name(xmlNodePtr node)
 {
     return (char *)node->name;
+}
+
+/* Helper function to avoid casting. */
+static char *xamine_xml_get_node_content(xmlNodePtr node)
+{
+    return (char *)xmlNodeGetContent(node);
 }
 
 static void xamine_parse_xmlxcb_file(XamineState *state, char *filename)
@@ -589,12 +596,12 @@ static XamineExpression *xamine_parse_expression(XamineState *state,
     else if(strcmp(xamine_xml_get_node_name(elem), "value") == 0)
     {
         e->type = XAMINE_VALUE;
-        e->value = strtol(elem->children->content, NULL, 0);
+        e->value = strtol(xamine_xml_get_node_content(elem), NULL, 0);
     }
     else if(strcmp(xamine_xml_get_node_name(elem), "fieldref") == 0)
     {
         e->type = XAMINE_FIELDREF;
-        e->field = strdup(elem->children->content);
+        e->field = strdup(xamine_xml_get_node_content(elem));
     }
     return e;
 }
