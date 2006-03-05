@@ -79,6 +79,8 @@ static const XamineDefinition core_type_definitions[] =
     { "INT32",  XAMINE_SIGNED,   4 }
 };
 
+static char *xamine_xml_get_prop(xmlNodePtr node, const char *name);
+static char *xamine_xml_get_node_name(xmlNodePtr node);
 static void xamine_parse_xmlxcb_file(XamineState *state, char *filename);
 static char* xamine_make_name(XamineExtension *extension, char *name);
 static XamineDefinition *xamine_find_type(XamineState *state, char *name);
@@ -290,6 +292,18 @@ void xamine_free(XaminedItem *item)
 
 /********** Private functions **********/
 
+/* Helper function to avoid casting. */
+static char *xamine_xml_get_prop(xmlNodePtr node, const char *name)
+{
+    return (char *)xmlGetProp(node, (xmlChar *)name);
+}
+
+/* Helper function to avoid casting. */
+static char *xamine_xml_get_node_name(xmlNodePtr node)
+{
+    return (char *)node->name;
+}
+
 static void xamine_parse_xmlxcb_file(XamineState *state, char *filename)
 {
     xmlDoc  *doc;
@@ -311,7 +325,7 @@ static void xamine_parse_xmlxcb_file(XamineState *state, char *filename)
     if(!root)
         return;
 
-    extension_xname = xmlGetProp(root, "extension-xname");
+    extension_xname = xamine_xml_get_prop(root, "extension-xname");
 
     if(extension_xname)
     {
@@ -329,7 +343,8 @@ static void xamine_parse_xmlxcb_file(XamineState *state, char *filename)
         if(extension == NULL)
         {
             extension = calloc(1, sizeof(XamineExtension));
-            extension->name = strdup(xmlGetProp(root, "extension-name"));
+            extension->name = strdup(xamine_xml_get_prop(root,
+                                                         "extension-name"));
             extension->xname = strdup(extension_xname);
             extension->next = state->extensions;
             state->extensions = extension;
@@ -343,25 +358,27 @@ static void xamine_parse_xmlxcb_file(XamineState *state, char *filename)
     {
         /* FIXME: Remove this */
         {
-            char *name = xmlGetProp(elem, "name");
+            char *name = xamine_xml_get_prop(elem, "name");
             printf("DEBUG:    Parsing element \"%s\", name=\"%s\"\n",
-                   elem->name, name ? name : "<not present>");
+                   xamine_xml_get_node_name(elem),
+                   name ? name : "<not present>");
         }
         
-        if(strcmp(elem->name, "request") == 0)
+        if(strcmp(xamine_xml_get_node_name(elem), "request") == 0)
         {
             /* Not yet implemented. */
         }
-        else if(strcmp(elem->name, "event") == 0)
+        else if(strcmp(xamine_xml_get_node_name(elem), "event") == 0)
         {
             char *no_sequence_number;
             XamineDefinition *def;
             XamineFieldDefinition *fields;
-            int number = atoi(xmlGetProp(elem, "number"));
+            int number = atoi(xamine_xml_get_prop(elem, "number"));
             if(number > 64)
                 continue;
             def = calloc(1, sizeof(XamineDefinition));
-            def->name = xamine_make_name(extension, xmlGetProp(elem, "name"));
+            def->name = xamine_make_name(extension,
+                                         xamine_xml_get_prop(elem, "name"));
             def->type = XAMINE_STRUCT;
             
             fields = xamine_parse_fields(state, elem);
@@ -376,7 +393,7 @@ static void xamine_parse_xmlxcb_file(XamineState *state, char *filename)
             def->fields->definition = xamine_find_type(state, "BYTE");
             def->fields->next = fields;
             fields = fields->next;
-            no_sequence_number = xmlGetProp(elem, "no-sequence-number");
+            no_sequence_number = xamine_xml_get_prop(elem, "no-sequence-number");
             if(no_sequence_number && strcmp(no_sequence_number, "true") == 0)
             {
                 def->fields->next->next = fields;
@@ -403,16 +420,17 @@ static void xamine_parse_xmlxcb_file(XamineState *state, char *filename)
             else
                 state->core_events[number] = def;
         }
-        else if(strcmp(elem->name, "eventcopy") == 0)
+        else if(strcmp(xamine_xml_get_node_name(elem), "eventcopy") == 0)
         {
             XamineDefinition *def;
-            int number = atoi(xmlGetProp(elem, "number"));
+            int number = atoi(xamine_xml_get_prop(elem, "number"));
             if(number > 64)
                 continue;
             def = calloc(1, sizeof(XamineDefinition));
-            def->name = strdup(xmlGetProp(elem, "name"));
+            def->name = strdup(xamine_xml_get_prop(elem, "name"));
             def->type = XAMINE_TYPEDEF;
-            def->ref = xamine_find_type(state, xmlGetProp(elem, "ref"));
+            def->ref = xamine_find_type(state,
+                                        xamine_xml_get_prop(elem, "ref"));
             
             if(extension)
             {
@@ -424,47 +442,50 @@ static void xamine_parse_xmlxcb_file(XamineState *state, char *filename)
             else
                 state->core_events[number] = def;
         }
-        else if(strcmp(elem->name, "error") == 0)
+        else if(strcmp(xamine_xml_get_node_name(elem), "error") == 0)
         {
         }
-        else if(strcmp(elem->name, "errorcopy") == 0)
+        else if(strcmp(xamine_xml_get_node_name(elem), "errorcopy") == 0)
         {
         }
-        else if(strcmp(elem->name, "struct") == 0)
+        else if(strcmp(xamine_xml_get_node_name(elem), "struct") == 0)
         {
             XamineDefinition *def = calloc(1, sizeof(XamineDefinition));
-            def->name = xamine_make_name(extension, xmlGetProp(elem, "name"));
+            def->name = xamine_make_name(extension,
+                                         xamine_xml_get_prop(elem, "name"));
             def->type = XAMINE_STRUCT;
             def->fields = xamine_parse_fields(state, elem);
             def->next = state->definitions;
             state->definitions = def;
         }
-        else if(strcmp(elem->name, "union") == 0)
+        else if(strcmp(xamine_xml_get_node_name(elem), "union") == 0)
         {
         }
-        else if(strcmp(elem->name, "xidtype") == 0)
+        else if(strcmp(xamine_xml_get_node_name(elem), "xidtype") == 0)
         {
             XamineDefinition *def = calloc(1, sizeof(XamineDefinition));
-            def->name = xamine_make_name(extension, xmlGetProp(elem, "name"));
+            def->name = xamine_make_name(extension,
+                                         xamine_xml_get_prop(elem, "name"));
             def->type = XAMINE_UNSIGNED;
             def->size = 4;
             def->next = state->definitions;
             state->definitions = def;
         }
-        else if(strcmp(elem->name, "enum") == 0)
+        else if(strcmp(xamine_xml_get_node_name(elem), "enum") == 0)
         {
         }
-        else if(strcmp(elem->name, "typedef") == 0)
+        else if(strcmp(xamine_xml_get_node_name(elem), "typedef") == 0)
         {
             XamineDefinition *def = calloc(1, sizeof(XamineDefinition));
             def->name = xamine_make_name(extension,
-                                         xmlGetProp(elem, "newname"));
+                                         xamine_xml_get_prop(elem, "newname"));
             def->type = XAMINE_TYPEDEF;
-            def->ref = xamine_find_type(state, xmlGetProp(elem, "oldname"));
+            def->ref = xamine_find_type(state,
+                                        xamine_xml_get_prop(elem, "oldname"));
             def->next = state->definitions;
             state->definitions = def;
         }
-        else if(strcmp(elem->name, "import") == 0)
+        else if(strcmp(xamine_xml_get_node_name(elem), "import") == 0)
         {
         }
     }
@@ -514,21 +535,21 @@ static XamineFieldDefinition *xamine_parse_fields(XamineState *state,
     {
         /* FIXME: handle elements other than "field", "pad", and "list". */
         *tail = calloc(1, sizeof(XamineFieldDefinition));
-        if(strcmp(cur->name, "pad") == 0)
+        if(strcmp(xamine_xml_get_node_name(cur), "pad") == 0)
         {
             (*tail)->name = "pad";
             (*tail)->definition = xamine_find_type(state, "CARD8");
             (*tail)->length = calloc(1, sizeof(XamineExpression));
             (*tail)->length->type = XAMINE_VALUE;
-            (*tail)->length->value = atoi(xmlGetProp(cur, "bytes"));
+            (*tail)->length->value = atoi(xamine_xml_get_prop(cur, "bytes"));
         }
         else
         {
-            (*tail)->name = strdup(xmlGetProp(cur, "name"));
+            (*tail)->name = strdup(xamine_xml_get_prop(cur, "name"));
             (*tail)->definition = xamine_find_type(state,
-                                               xmlGetProp(cur, "type"));
+                                      xamine_xml_get_prop(cur, "type"));
             /* FIXME: handle missing length expressions. */
-            if(strcmp(cur->name, "list") == 0)
+            if(strcmp(xamine_xml_get_node_name(cur), "list") == 0)
                 (*tail)->length = xamine_parse_expression(state,
                                                           cur->children);
         }
@@ -544,9 +565,9 @@ static XamineExpression *xamine_parse_expression(XamineState *state,
 {
     XamineExpression *e = calloc(1, sizeof(XamineExpression));
     elem = xamine_xml_next_elem(elem);
-    if(strcmp(elem->name, "op") == 0)
+    if(strcmp(xamine_xml_get_node_name(elem), "op") == 0)
     {
-        char *temp = xmlGetProp(elem, "op");
+        char *temp = xamine_xml_get_prop(elem, "op");
         e->type = XAMINE_OP;
         if(strcmp(temp, "+") == 0)
             e->op = XAMINE_ADD;
@@ -565,12 +586,12 @@ static XamineExpression *xamine_parse_expression(XamineState *state,
         elem = xamine_xml_next_elem(elem->next);
         e->right = xamine_parse_expression(state, elem);
     }
-    else if(strcmp(elem->name, "value") == 0)
+    else if(strcmp(xamine_xml_get_node_name(elem), "value") == 0)
     {
         e->type = XAMINE_VALUE;
         e->value = strtol(elem->children->content, NULL, 0);
     }
-    else if(strcmp(elem->name, "fieldref") == 0)
+    else if(strcmp(xamine_xml_get_node_name(elem), "fieldref") == 0)
     {
         e->type = XAMINE_FIELDREF;
         e->field = strdup(elem->children->content);
