@@ -1,4 +1,4 @@
-AC_INIT([libXamine], 0.1, [josh@freedesktop.org])
+AC_INIT([libXamine], 0.1, [xcb@lists.freedesktop.org])
 AC_CONFIG_SRCDIR([libXamine.pc.in])
 AM_INIT_AUTOMAKE([foreign dist-bzip2 subdir-objects])
 
