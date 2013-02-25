@@ -1,7 +1,22 @@
+ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
+
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libXamine.pc
+
+AM_CPPFLAGS = \
+	-include $(top_builddir)/src/config.h
+
+AM_CFLAGS = $(BASE_CFLAGS)
+
 lib_LTLIBRARIES = libXamine.la
 
-libXamine_la_SOURCES = src/xamine.c src/strsplit.c
-include_HEADERS = src/xamine.h
+include_HEADERS = \
+	src/xamine.h
 
-libXamine_la_CFLAGS = $(LIBXML_CFLAGS)
+libXamine_la_SOURCES = \
+	src/xamine.c \
+	src/strsplit.c \
+	src/strsplit.h
+
+libXamine_la_CFLAGS = $(AM_CFLAGS) $(LIBXML_CFLAGS)
 libXamine_la_LIBADD = $(LIBXML_LIBS)
