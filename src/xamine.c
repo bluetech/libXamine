@@ -12,6 +12,7 @@
  * License for more details.
  */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <glob.h>
@@ -605,6 +606,13 @@ xamine_evaluate_expression(XamineExpression *expression, XaminedItem *parent)
                 case XAMINE_CHAR: return cur->u.char_value;
                 case XAMINE_SIGNED: return cur->u.signed_value;
                 case XAMINE_UNSIGNED: return cur->u.unsigned_value;
+
+                /* FIXME: Remove assert. */
+                case XAMINE_STRUCT:
+                case XAMINE_UNION:
+                case XAMINE_TYPEDEF:
+                    assert(!"unreachable");
+                    return 0;
                 }
             }
         }
@@ -624,6 +632,10 @@ xamine_evaluate_expression(XamineExpression *expression, XaminedItem *parent)
         }
     }
     }
+
+    /* FIXME: Remove assert. */
+    assert(!"unreachable");
+    return 0;
 }
 
 static XaminedItem *
@@ -677,7 +689,15 @@ xamine_definition(XamineConversation *conversation, unsigned char **data,
                 for (int i = 0; i < definition->u.size; i++)
                     *dest-- = *src++;
             }
+            break;
         }
+
+        /* FIXME: Remove assert. */
+        case XAMINE_STRUCT:
+        case XAMINE_UNION:
+        case XAMINE_TYPEDEF:
+            assert(!"unreachable");
+            return 0;
         }
         *data += definition->u.size;
         *size -= definition->u.size;
