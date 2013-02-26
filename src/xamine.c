@@ -21,6 +21,14 @@
 #include "strsplit.h"
 #include "xamine.h"
 
+#if defined(__GNUC__) && (__GNUC__ >= 4) && !defined(__CYGWIN__)
+# define XAMINE_EXPORT      __attribute__((visibility("default")))
+#elif defined(__SUNPRO_C) && (__SUNPRO_C >= 0x550)
+# define XAMINE_EXPORT      __global
+#else /* not gcc >= 4 and not Sun Studio >= 8 */
+# define XAMINE_EXPORT
+#endif
+
 const char *XAMINE_PATH_DEFAULT = "/usr/include/X11/XCB:"
                                   "/usr/include/X11/XCB/extensions";
 const char *XAMINE_PATH_DELIM = ":";
@@ -525,7 +533,7 @@ xamine_definition(XamineConversation *conversation, unsigned char **data,
 /********** Public functions **********/
 
 /* Initialization and cleanup */
-XamineState *
+XAMINE_EXPORT XamineState *
 xamine_init(void)
 {
     int i;
@@ -605,7 +613,7 @@ xamine_init(void)
     return state;
 }
 
-void
+XAMINE_EXPORT void
 xamine_cleanup(XamineState *state)
 {
     XamineDefinition *temp;
@@ -618,7 +626,7 @@ xamine_cleanup(XamineState *state)
 }
 
 /* Retrieval of the type definitions. */
-XamineDefinition *
+XAMINE_EXPORT XamineDefinition *
 xamine_get_definitions(XamineState *state)
 {
     if (!state)
@@ -628,7 +636,7 @@ xamine_get_definitions(XamineState *state)
 }
 
 /* Creation and destruction of conversations. */
-XamineConversation *
+XAMINE_EXPORT XamineConversation *
 xamine_create_conversation(XamineState *state)
 {
     XamineConversation *conversation;
@@ -643,14 +651,14 @@ xamine_create_conversation(XamineState *state)
     return conversation;
 }
 
-void
+XAMINE_EXPORT void
 xamine_free_conversation(XamineConversation *conversation)
 {
     free(conversation);
 }
 
 /* Analysis */
-XaminedItem *
+XAMINE_EXPORT XaminedItem *
 xamine(XamineConversation *conversation, XamineDirection dir,
        unsigned char *data, unsigned int size)
 {
@@ -701,7 +709,7 @@ xamine(XamineConversation *conversation, XamineDirection dir,
     return xamine_definition(conversation, &data, &size, &offset, definition, NULL);
 }
 
-void
+XAMINE_EXPORT void
 xamine_free(XaminedItem *item)
 {
     if (item) {
