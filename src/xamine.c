@@ -77,7 +77,7 @@ static const XamineDefinition core_type_definitions[] = {
 static char *
 xamine_xml_get_prop(xmlNodePtr node, const char *name);
 
-static char *
+static const char *
 xamine_xml_get_node_name(xmlNodePtr node);
 
 static char *
@@ -90,7 +90,7 @@ static char *
 xamine_make_name(XamineExtension *extension, char *name);
 
 static XamineDefinition *
-xamine_find_type(XamineState *state, char *name);
+xamine_find_type(XamineState *state, const char *name);
 
 static xmlNode *
 xamine_xml_next_elem(xmlNode *elem);
@@ -304,14 +304,14 @@ xamine_free(XaminedItem *item)
 static char *
 xamine_xml_get_prop(xmlNodePtr node, const char *name)
 {
-    return (char *) xmlGetProp(node, (xmlChar *) name);
+    return (char *) xmlGetProp(node, (const xmlChar *) name);
 }
 
 /* Helper function to avoid casting. */
-static char *
+static const char *
 xamine_xml_get_node_name(xmlNodePtr node)
 {
-    return (char *) node->name;
+    return (const char *) node->name;
 }
 
 /* Helper function to avoid casting. */
@@ -504,7 +504,7 @@ xamine_make_name(XamineExtension *extension, char *name)
 }
 
 static XamineDefinition *
-xamine_find_type(XamineState *state, char *name)
+xamine_find_type(XamineState *state, const char *name)
 {
     /* FIXME: does not work for extension types. */
     for (XamineDefinition *def = state->definitions; def; def = def->next)
@@ -532,7 +532,7 @@ xamine_parse_fields(XamineState *state, xmlNode *elem)
         /* FIXME: handle elements other than "field", "pad", and "list". */
         *tail = calloc(1, sizeof(XamineFieldDefinition));
         if (strcmp(xamine_xml_get_node_name(cur), "pad") == 0) {
-            (*tail)->name = "pad";
+            (*tail)->name = strdup("pad");
             (*tail)->definition = xamine_find_type(state, "CARD8");
             (*tail)->length = calloc(1, sizeof(XamineExpression));
             (*tail)->length->type = XAMINE_VALUE;

@@ -31,7 +31,7 @@ typedef enum {
 } XamineDirection;
 
 typedef struct XamineDefinition {
-    char *name;
+    const char *name;
     XamineType type;
     union {
         unsigned int size;                    /* base types */
