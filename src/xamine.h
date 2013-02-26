@@ -37,7 +37,7 @@ typedef struct XamineDefinition {
         unsigned int size;                    /* base types */
         struct XamineFieldDefinition *fields; /* struct, union */
         struct XamineDefinition *ref;         /* typedef */
-    };
+    } u;
     struct XamineDefinition *next;
 } XamineDefinition;
 
@@ -61,12 +61,12 @@ typedef struct XamineExpression {
     union {
         char *field;         /* Field name for XAMINE_FIELDREF */
         unsigned long value; /* Value for XAMINE_VALUE */
-        struct {             /* Operator and operands for XAMINE_OP */
+        struct {          /* Operator and operands for XAMINE_OP */
             XamineOp op;
             struct XamineExpression *left;
             struct XamineExpression *right;
-        };
-    };
+        } op;
+    } u;
 } XamineExpression;
 
 typedef struct XamineFieldDefinition {
@@ -85,7 +85,7 @@ typedef struct XaminedItem {
         char          char_value;
         signed long   signed_value;
         unsigned long unsigned_value;
-    };
+    } u;
     struct XaminedItem *child;
     struct XaminedItem *next;
 } XaminedItem;

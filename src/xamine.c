@@ -398,20 +398,20 @@ xamine_parse_xmlxcb_file(XamineState *state, char *filename)
                 fields->definition = xamine_find_type(state, "CARD8");
             }
 
-            def->fields = calloc(1, sizeof(XamineFieldDefinition));
-            def->fields->name = strdup("response_type");
-            def->fields->definition = xamine_find_type(state, "BYTE");
-            def->fields->next = fields;
+            def->u.fields = calloc(1, sizeof(XamineFieldDefinition));
+            def->u.fields->name = strdup("response_type");
+            def->u.fields->definition = xamine_find_type(state, "BYTE");
+            def->u.fields->next = fields;
             fields = fields->next;
             no_sequence_number = xamine_xml_get_prop(elem, "no-sequence-number");
             if (no_sequence_number && strcmp(no_sequence_number, "true") == 0) {
-                def->fields->next->next = fields;
+                def->u.fields->next->next = fields;
             }
             else {
-                def->fields->next->next = calloc(1, sizeof(XamineFieldDefinition));
-                def->fields->next->next->name = strdup("sequence");
-                def->fields->next->next->definition = xamine_find_type(state, "CARD16");
-                def->fields->next->next->next = fields;
+                def->u.fields->next->next = calloc(1, sizeof(XamineFieldDefinition));
+                def->u.fields->next->next->name = strdup("sequence");
+                def->u.fields->next->next->definition = xamine_find_type(state, "CARD16");
+                def->u.fields->next->next->next = fields;
             }
             def->next = state->definitions;
             state->definitions = def;
@@ -437,7 +437,7 @@ xamine_parse_xmlxcb_file(XamineState *state, char *filename)
             def = calloc(1, sizeof(XamineDefinition));
             def->name = strdup(xamine_xml_get_prop(elem, "name"));
             def->type = XAMINE_TYPEDEF;
-            def->ref = xamine_find_type(state, xamine_xml_get_prop(elem, "ref"));
+            def->u.ref = xamine_find_type(state, xamine_xml_get_prop(elem, "ref"));
 
             if (extension) {
                 XamineEvent *event = calloc(1, sizeof(XamineEvent));
@@ -457,7 +457,7 @@ xamine_parse_xmlxcb_file(XamineState *state, char *filename)
             XamineDefinition *def = calloc(1, sizeof(XamineDefinition));
             def->name = xamine_make_name(extension, xamine_xml_get_prop(elem, "name"));
             def->type = XAMINE_STRUCT;
-            def->fields = xamine_parse_fields(state, elem);
+            def->u.fields = xamine_parse_fields(state, elem);
             def->next = state->definitions;
             state->definitions = def;
         }
@@ -467,7 +467,7 @@ xamine_parse_xmlxcb_file(XamineState *state, char *filename)
             XamineDefinition *def = calloc(1, sizeof(XamineDefinition));
             def->name = xamine_make_name(extension, xamine_xml_get_prop(elem, "name"));
             def->type = XAMINE_UNSIGNED;
-            def->size = 4;
+            def->u.size = 4;
             def->next = state->definitions;
             state->definitions = def;
         }
@@ -477,7 +477,7 @@ xamine_parse_xmlxcb_file(XamineState *state, char *filename)
             XamineDefinition *def = calloc(1, sizeof(XamineDefinition));
             def->name = xamine_make_name(extension, xamine_xml_get_prop(elem, "newname"));
             def->type = XAMINE_TYPEDEF;
-            def->ref = xamine_find_type(state, xamine_xml_get_prop(elem, "oldname"));
+            def->u.ref = xamine_find_type(state, xamine_xml_get_prop(elem, "oldname"));
             def->next = state->definitions;
             state->definitions = def;
         }
@@ -536,7 +536,7 @@ xamine_parse_fields(XamineState *state, xmlNode *elem)
             (*tail)->definition = xamine_find_type(state, "CARD8");
             (*tail)->length = calloc(1, sizeof(XamineExpression));
             (*tail)->length->type = XAMINE_VALUE;
-            (*tail)->length->value = atoi(xamine_xml_get_prop(cur, "bytes"));
+            (*tail)->length->u.value = atoi(xamine_xml_get_prop(cur, "bytes"));
         }
         else {
             (*tail)->name = strdup(xamine_xml_get_prop(cur, "name"));
@@ -562,29 +562,29 @@ xamine_parse_expression(XamineState *state, xmlNode *elem)
         char *temp = xamine_xml_get_prop(elem, "op");
         e->type = XAMINE_OP;
         if (strcmp(temp, "+") == 0)
-            e->op = XAMINE_ADD;
+            e->u.op.op = XAMINE_ADD;
         else if (strcmp(temp, "-") == 0)
-            e->op = XAMINE_SUBTRACT;
+            e->u.op.op = XAMINE_SUBTRACT;
         else if (strcmp(temp, "*") == 0)
-            e->op = XAMINE_MULTIPLY;
+            e->u.op.op = XAMINE_MULTIPLY;
         else if (strcmp(temp, "/") == 0)
-            e->op = XAMINE_DIVIDE;
+            e->u.op.op = XAMINE_DIVIDE;
         else if (strcmp(temp, "<<") == 0)
-            e->op = XAMINE_LEFT_SHIFT;
+            e->u.op.op = XAMINE_LEFT_SHIFT;
         else if (strcmp(temp, "&") == 0)
-            e->op = XAMINE_BITWISE_AND;
+            e->u.op.op = XAMINE_BITWISE_AND;
         elem = xamine_xml_next_elem(elem->children);
-        e->left = xamine_parse_expression(state, elem);
+        e->u.op.left = xamine_parse_expression(state, elem);
         elem = xamine_xml_next_elem(elem->next);
-        e->right = xamine_parse_expression(state, elem);
+        e->u.op.right = xamine_parse_expression(state, elem);
     }
     else if (strcmp(xamine_xml_get_node_name(elem), "value") == 0) {
         e->type = XAMINE_VALUE;
-        e->value = strtol(xamine_xml_get_node_content(elem), NULL, 0);
+        e->u.value = strtol(xamine_xml_get_node_content(elem), NULL, 0);
     }
     else if (strcmp(xamine_xml_get_node_name(elem), "fieldref") == 0) {
         e->type = XAMINE_FIELDREF;
-        e->field = strdup(xamine_xml_get_node_content(elem));
+        e->u.field = strdup(xamine_xml_get_node_content(elem));
     }
 
     return e;
@@ -595,27 +595,27 @@ xamine_evaluate_expression(XamineExpression *expression, XaminedItem *parent)
 {
     switch (expression->type) {
     case XAMINE_VALUE:
-        return expression->value;
+        return expression->u.value;
 
     case XAMINE_FIELDREF:
         /* FIXME: handle not found or wrong type */
         for (XaminedItem *cur = parent->child; cur; cur = cur->next) {
-            if (strcmp(cur->name, expression->field) == 0) {
+            if (strcmp(cur->name, expression->u.field) == 0) {
                 switch (cur->definition->type) {
-                case XAMINE_BOOLEAN: return cur->bool_value;
-                case XAMINE_CHAR: return cur->char_value;
-                case XAMINE_SIGNED: return cur->signed_value;
-                case XAMINE_UNSIGNED: return cur->unsigned_value;
+                case XAMINE_BOOLEAN: return cur->u.bool_value;
+                case XAMINE_CHAR: return cur->u.char_value;
+                case XAMINE_SIGNED: return cur->u.signed_value;
+                case XAMINE_UNSIGNED: return cur->u.unsigned_value;
                 }
             }
         }
 
     case XAMINE_OP:
     {
-        long left  = xamine_evaluate_expression(expression->left, parent);
-        long right = xamine_evaluate_expression(expression->right, parent);
+        long left  = xamine_evaluate_expression(expression->u.op.left, parent);
+        long right = xamine_evaluate_expression(expression->u.op.right, parent);
 
-        switch (expression->op) {
+        switch (expression->u.op.op) {
         case XAMINE_ADD:         return left + right;
         case XAMINE_SUBTRACT:    return left - right;
         case XAMINE_MULTIPLY:    return left * right;
@@ -635,7 +635,7 @@ xamine_definition(XamineConversation *conversation, void **data,
     XaminedItem *xamined;
 
     if (definition->type == XAMINE_TYPEDEF) {
-        xamined = xamine_definition(conversation, data, size, offset, definition->ref, parent);
+        xamined = xamine_definition(conversation, data, size, offset, definition->u.ref, parent);
         xamined->definition = definition;
         return xamined;
     }
@@ -645,7 +645,7 @@ xamine_definition(XamineConversation *conversation, void **data,
     if (definition->type == XAMINE_STRUCT) {
         XaminedItem **end = &xamined->child;
 
-        for (XamineFieldDefinition *child = definition->fields; child; child = child->next) {
+        for (XamineFieldDefinition *child = definition->u.fields; child; child = child->next) {
             *end = xamine_field_definition(conversation, data, size, offset, child, xamined);
             end = &((*end)->next);
         }
@@ -655,34 +655,34 @@ xamine_definition(XamineConversation *conversation, void **data,
         switch (definition->type) {
         case XAMINE_BOOLEAN:
             /* FIXME: field->definition->size must be 1 */
-            xamined->bool_value = *(unsigned char*) (*data) ? 1 : 0;
+            xamined->u.bool_value = *(unsigned char*) (*data) ? 1 : 0;
             break;
 
         case XAMINE_CHAR:
             /* FIXME: field->definition->size must be 1 */
-            xamined->char_value = *(char *) (*data);
+            xamined->u.char_value = *(char *) (*data);
             break;
 
         case XAMINE_SIGNED:
         case XAMINE_UNSIGNED:
         {
             unsigned char *dest = definition->type == XAMINE_SIGNED
-                                ? (unsigned char *) &(xamined->signed_value)
-                                : (unsigned char *) &(xamined->unsigned_value);
+                                ? (unsigned char *) &(xamined->u.signed_value)
+                                : (unsigned char *) &(xamined->u.unsigned_value);
             unsigned char *src = (unsigned char*) (*data);
-            if (definition->size == 1 || conversation->is_le == conversation->state->host_is_le) {
-                memcpy(dest, src, definition->size);
+            if (definition->u.size == 1 || conversation->is_le == conversation->state->host_is_le) {
+                memcpy(dest, src, definition->u.size);
             }
             else {
-                dest += definition->size - 1;
-                for (int i = 0; i < definition->size; i++)
+                dest += definition->u.size - 1;
+                for (int i = 0; i < definition->u.size; i++)
                     *dest-- = *src++;
             }
         }
         }
-        *data   += definition->size;
-        *size   -= definition->size;
-        *offset += definition->size;
+        *data   += definition->u.size;
+        *size   -= definition->u.size;
+        *offset += definition->u.size;
     }
 
     return xamined;
