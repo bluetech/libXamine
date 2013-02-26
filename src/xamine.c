@@ -102,12 +102,12 @@ static XamineExpression *
 xamine_parse_expression(XamineState *state, xmlNode *elem);
 
 static XaminedItem *
-xamine_definition(XamineConversation *conversation, void **data,
+xamine_definition(XamineConversation *conversation, unsigned char **data,
                   unsigned int *size, unsigned int *offset,
                   XamineDefinition *definition, XaminedItem *parent);
 
 static XaminedItem *
-xamine_field_definition(XamineConversation *conversation, void **data,
+xamine_field_definition(XamineConversation *conversation, unsigned char **data,
                         unsigned int *size, unsigned int *offset,
                         XamineFieldDefinition *definition, XaminedItem *parent);
 
@@ -239,7 +239,7 @@ xamine_free_conversation(XamineConversation *conversation)
 /* Analysis */
 XaminedItem *
 xamine(XamineConversation *conversation, XamineDirection dir,
-       void *data, unsigned int size)
+       unsigned char *data, unsigned int size)
 {
     XamineDefinition *definition = NULL;
     unsigned int offset = 0;
@@ -260,9 +260,9 @@ xamine(XamineConversation *conversation, XamineDirection dir,
         if (size < 32)
             return NULL;
 
-        response_type = *(unsigned char *) data;
+        response_type = *data;
         if (response_type == 0) {      /* Error */
-            unsigned char error_code = *(unsigned char*) (data + 1);
+            unsigned char error_code = *(data + 1);
             if (error_code < 128)
                 definition = conversation->state->core_errors[error_code];
             else
@@ -598,7 +598,6 @@ xamine_evaluate_expression(XamineExpression *expression, XaminedItem *parent)
         return expression->u.value;
 
     case XAMINE_FIELDREF:
-        /* FIXME: handle not found or wrong type */
         for (XaminedItem *cur = parent->child; cur; cur = cur->next) {
             if (strcmp(cur->name, expression->u.field) == 0) {
                 switch (cur->definition->type) {
@@ -628,7 +627,7 @@ xamine_evaluate_expression(XamineExpression *expression, XaminedItem *parent)
 }
 
 static XaminedItem *
-xamine_definition(XamineConversation *conversation, void **data,
+xamine_definition(XamineConversation *conversation, unsigned char **data,
                   unsigned int *size, unsigned int *offset,
                   XamineDefinition *definition, XaminedItem *parent)
 {
@@ -669,7 +668,7 @@ xamine_definition(XamineConversation *conversation, void **data,
             unsigned char *dest = definition->type == XAMINE_SIGNED
                                 ? (unsigned char *) &(xamined->u.signed_value)
                                 : (unsigned char *) &(xamined->u.unsigned_value);
-            unsigned char *src = (unsigned char*) (*data);
+            unsigned char *src = *data;
             if (definition->u.size == 1 || conversation->is_le == conversation->state->host_is_le) {
                 memcpy(dest, src, definition->u.size);
             }
@@ -680,8 +679,8 @@ xamine_definition(XamineConversation *conversation, void **data,
             }
         }
         }
-        *data   += definition->u.size;
-        *size   -= definition->u.size;
+        *data += definition->u.size;
+        *size -= definition->u.size;
         *offset += definition->u.size;
     }
 
@@ -689,7 +688,7 @@ xamine_definition(XamineConversation *conversation, void **data,
 }
 
 static XaminedItem *
-xamine_field_definition(XamineConversation *conversation, void **data,
+xamine_field_definition(XamineConversation *conversation, unsigned char **data,
                         unsigned int *size, unsigned int *offset,
                         XamineFieldDefinition *field, XaminedItem *parent)
 {

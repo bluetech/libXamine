@@ -118,7 +118,7 @@ xamine_free_conversation(XamineConversation *conversation);
 /* Analysis */
 XaminedItem *
 xamine(XamineConversation *conversation, XamineDirection dir,
-       void *data, unsigned int size);
+       unsigned char *data, unsigned int size);
 
 void
 xamine_free(XaminedItem *item);
