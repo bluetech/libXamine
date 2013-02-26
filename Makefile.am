@@ -20,3 +20,11 @@ libXamine_la_SOURCES = \
 
 libXamine_la_CFLAGS = $(AM_CFLAGS) $(LIBXML_CFLAGS)
 libXamine_la_LIBADD = $(LIBXML_LIBS)
+
+# Tests
+
+test_ev_LDADD = libXamine.la -lxcb $(LIBXML_LIBS)
+test_ev_CFLAGS = $(AM_CFLAGS) $(LIBXML_CFLAGS)
+
+check_PROGRAMS = \
+	test/ev
