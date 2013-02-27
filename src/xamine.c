@@ -29,8 +29,7 @@
 # define XAMINE_EXPORT
 #endif
 
-const char *XAMINE_PATH_DEFAULT = "/usr/include/X11/XCB:"
-                                  "/usr/include/X11/XCB/extensions";
+const char *XAMINE_PATH_DEFAULT = "/usr/share/xcb";
 const char *XAMINE_PATH_DELIM = ":";
 const char *XAMINE_PATH_GLOB = "/*.xml";
 
