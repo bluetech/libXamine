@@ -90,27 +90,32 @@ struct xamine_item {
     struct xamine_item *next;
 };
 
-/*
- * Opaque types for an Xamine library state and a conversation-specific
- * state.
- */
-struct xamine_state;
+/* Context */
+
+struct xamine_context;
+
+enum xamine_context_flags {
+    XAMINE_CONTEXT_NO_FLAGS = 0
+};
+
+struct xamine_context *
+xamine_context_new(enum xamine_context_flags flags);
+
+struct xamine_context *
+xamine_context_ref(struct xamine_context *context);
+
+struct xamine_context *
+xamine_context_unref(struct xamine_context *context);
+
+struct xamine_definition *
+xamine_get_definitions(struct xamine_context *state);
+
+/* Conversation */
+
 struct xamine_conversation;
 
-/* Initialization and cleanup */
-struct xamine_state *
-xamine_init(void);
-
-void
-xamine_cleanup(struct xamine_state *state);
-
-/* Retrieval of the type definitions. */
-struct xamine_definition *
-xamine_get_definitions(struct xamine_state *state);
-
-/* Creation and destruction of conversations. */
 struct xamine_conversation *
-xamine_create_conversation(struct xamine_state *state);
+xamine_create_conversation(struct xamine_context *context);
 
 void
 xamine_free_conversation(struct xamine_conversation *conversation);

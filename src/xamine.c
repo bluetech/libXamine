@@ -56,7 +56,10 @@ struct xamine_extension {
     struct xamine_extension *next;
 };
 
-struct xamine_state {
+struct xamine_context {
+    int refcnt;
+    enum xamine_context_flags flags;
+
     unsigned char host_is_le;
     struct xamine_definition *definitions;
     struct xamine_definition *core_events[64];  /* Core events 2-63 (0-1 unused) */
@@ -65,7 +68,7 @@ struct xamine_state {
 };
 
 struct xamine_conversation {
-    struct xamine_state *state;
+    struct xamine_context *ctx;
     unsigned char is_le;
     struct xamine_definition *extension_events[64];  /* Extension events 64-127  */
     struct xamine_definition *extension_errors[128]; /* Extension errors 128-255 */
@@ -133,17 +136,17 @@ xamine_make_name(struct xamine_extension *extension, char *name)
 }
 
 static struct xamine_definition *
-xamine_find_type(struct xamine_state *state, const char *name)
+xamine_find_type(struct xamine_context *ctx, const char *name)
 {
     /* FIXME: does not work for extension types. */
-    for (struct xamine_definition *def = state->definitions; def; def = def->next)
+    for (struct xamine_definition *def = ctx->definitions; def; def = def->next)
         if (strcmp(def->name, name) == 0)
             return def;
     return NULL;
 }
 
 static struct xamine_expression *
-xamine_parse_expression(struct xamine_state *state, xmlNode *elem)
+xamine_parse_expression(struct xamine_context *ctx, xmlNode *elem)
 {
     struct xamine_expression *e = calloc(1, sizeof(*e));
 
@@ -164,9 +167,9 @@ xamine_parse_expression(struct xamine_state *state, xmlNode *elem)
         else if (strcmp(temp, "&") == 0)
             e->u.op.op = XAMINE_BITWISE_AND;
         elem = xamine_xml_next_elem(elem->children);
-        e->u.op.left = xamine_parse_expression(state, elem);
+        e->u.op.left = xamine_parse_expression(ctx, elem);
         elem = xamine_xml_next_elem(elem->next);
-        e->u.op.right = xamine_parse_expression(state, elem);
+        e->u.op.right = xamine_parse_expression(ctx, elem);
     }
     else if (strcmp(xamine_xml_get_node_name(elem), "value") == 0) {
         e->type = XAMINE_VALUE;
@@ -181,7 +184,7 @@ xamine_parse_expression(struct xamine_state *state, xmlNode *elem)
 }
 
 static struct xamine_field_definition *
-xamine_parse_fields(struct xamine_state *state, xmlNode *elem)
+xamine_parse_fields(struct xamine_context *ctx, xmlNode *elem)
 {
     xmlNode *cur;
     struct xamine_field_definition *head;
@@ -196,17 +199,17 @@ xamine_parse_fields(struct xamine_state *state, xmlNode *elem)
         *tail = calloc(1, sizeof(**tail));
         if (strcmp(xamine_xml_get_node_name(cur), "pad") == 0) {
             (*tail)->name = strdup("pad");
-            (*tail)->definition = xamine_find_type(state, "CARD8");
+            (*tail)->definition = xamine_find_type(ctx, "CARD8");
             (*tail)->length = calloc(1, sizeof(*(*tail)->length));
             (*tail)->length->type = XAMINE_VALUE;
             (*tail)->length->u.value = atoi(xamine_xml_get_prop(cur, "bytes"));
         }
         else {
             (*tail)->name = strdup(xamine_xml_get_prop(cur, "name"));
-            (*tail)->definition = xamine_find_type(state, xamine_xml_get_prop(cur, "type"));
+            (*tail)->definition = xamine_find_type(ctx, xamine_xml_get_prop(cur, "type"));
             /* FIXME: handle missing length expressions. */
             if (strcmp(xamine_xml_get_node_name(cur), "list") == 0)
-                (*tail)->length = xamine_parse_expression(state, cur->children);
+                (*tail)->length = xamine_parse_expression(ctx, cur->children);
         }
         tail = &((*tail)->next);
     }
@@ -216,7 +219,7 @@ xamine_parse_fields(struct xamine_state *state, xmlNode *elem)
 }
 
 static void
-xamine_parse_xmlxcb_file(struct xamine_state *state, char *filename)
+xamine_parse_xmlxcb_file(struct xamine_context *ctx, char *filename)
 {
     xmlDoc *doc;
     xmlNode *root, *elem;
@@ -242,7 +245,7 @@ xamine_parse_xmlxcb_file(struct xamine_state *state, char *filename)
         /* FIXME: Remove this. */
         printf("Extension: %s\n", extension_xname);
 
-        for (extension = state->extensions; extension; extension = extension->next)
+        for (extension = ctx->extensions; extension; extension = extension->next)
             if (strcmp(extension->xname, extension_xname) == 0)
                 break;
 
@@ -250,8 +253,8 @@ xamine_parse_xmlxcb_file(struct xamine_state *state, char *filename)
             extension = calloc(1, sizeof(*extension));
             extension->name = strdup(xamine_xml_get_prop(root, "extension-name"));
             extension->xname = strdup(extension_xname);
-            extension->next = state->extensions;
-            state->extensions = extension;
+            extension->next = ctx->extensions;
+            ctx->extensions = extension;
         }
     }
     else {
@@ -285,16 +288,16 @@ xamine_parse_xmlxcb_file(struct xamine_state *state, char *filename)
             def->name = xamine_make_name(extension, xamine_xml_get_prop(elem, "name"));
             def->type = XAMINE_STRUCT;
 
-            fields = xamine_parse_fields(state, elem);
+            fields = xamine_parse_fields(ctx, elem);
             if (!fields) {
                 fields = calloc(1, sizeof(*fields));
                 fields->name = strdup("pad");
-                fields->definition = xamine_find_type(state, "CARD8");
+                fields->definition = xamine_find_type(ctx, "CARD8");
             }
 
             def->u.fields = calloc(1, sizeof(*def->u.fields));
             def->u.fields->name = strdup("response_type");
-            def->u.fields->definition = xamine_find_type(state, "BYTE");
+            def->u.fields->definition = xamine_find_type(ctx, "BYTE");
             def->u.fields->next = fields;
             fields = fields->next;
             no_sequence_number = xamine_xml_get_prop(elem, "no-sequence-number");
@@ -304,11 +307,11 @@ xamine_parse_xmlxcb_file(struct xamine_state *state, char *filename)
             else {
                 def->u.fields->next->next = calloc(1, sizeof(*def->u.fields->next->next));
                 def->u.fields->next->next->name = strdup("sequence");
-                def->u.fields->next->next->definition = xamine_find_type(state, "CARD16");
+                def->u.fields->next->next->definition = xamine_find_type(ctx, "CARD16");
                 def->u.fields->next->next->next = fields;
             }
-            def->next = state->definitions;
-            state->definitions = def;
+            def->next = ctx->definitions;
+            ctx->definitions = def;
 
             if (extension) {
                 struct xamine_event *event = calloc(1, sizeof(*event));
@@ -317,7 +320,7 @@ xamine_parse_xmlxcb_file(struct xamine_state *state, char *filename)
                 event->next = extension->events;
             }
             else {
-                state->core_events[number] = def;
+                ctx->core_events[number] = def;
             }
         }
         else if (strcmp(xamine_xml_get_node_name(elem), "eventcopy") == 0) {
@@ -331,7 +334,7 @@ xamine_parse_xmlxcb_file(struct xamine_state *state, char *filename)
             def = calloc(1, sizeof(*def));
             def->name = strdup(xamine_xml_get_prop(elem, "name"));
             def->type = XAMINE_TYPEDEF;
-            def->u.ref = xamine_find_type(state, xamine_xml_get_prop(elem, "ref"));
+            def->u.ref = xamine_find_type(ctx, xamine_xml_get_prop(elem, "ref"));
 
             if (extension) {
                 struct xamine_event *event = calloc(1, sizeof(*event));
@@ -340,7 +343,7 @@ xamine_parse_xmlxcb_file(struct xamine_state *state, char *filename)
                 event->next = extension->events;
             }
             else {
-                state->core_events[number] = def;
+                ctx->core_events[number] = def;
             }
         }
         else if (strcmp(xamine_xml_get_node_name(elem), "error") == 0) {
@@ -351,9 +354,9 @@ xamine_parse_xmlxcb_file(struct xamine_state *state, char *filename)
             struct xamine_definition *def = calloc(1, sizeof(*def));
             def->name = xamine_make_name(extension, xamine_xml_get_prop(elem, "name"));
             def->type = XAMINE_STRUCT;
-            def->u.fields = xamine_parse_fields(state, elem);
-            def->next = state->definitions;
-            state->definitions = def;
+            def->u.fields = xamine_parse_fields(ctx, elem);
+            def->next = ctx->definitions;
+            ctx->definitions = def;
         }
         else if (strcmp(xamine_xml_get_node_name(elem), "union") == 0) {
         }
@@ -362,8 +365,8 @@ xamine_parse_xmlxcb_file(struct xamine_state *state, char *filename)
             def->name = xamine_make_name(extension, xamine_xml_get_prop(elem, "name"));
             def->type = XAMINE_UNSIGNED;
             def->u.size = 4;
-            def->next = state->definitions;
-            state->definitions = def;
+            def->next = ctx->definitions;
+            ctx->definitions = def;
         }
         else if (strcmp(xamine_xml_get_node_name(elem), "enum") == 0) {
         }
@@ -371,9 +374,9 @@ xamine_parse_xmlxcb_file(struct xamine_state *state, char *filename)
             struct xamine_definition *def = calloc(1, sizeof(*def));
             def->name = xamine_make_name(extension, xamine_xml_get_prop(elem, "newname"));
             def->type = XAMINE_TYPEDEF;
-            def->u.ref = xamine_find_type(state, xamine_xml_get_prop(elem, "oldname"));
-            def->next = state->definitions;
-            state->definitions = def;
+            def->u.ref = xamine_find_type(ctx, xamine_xml_get_prop(elem, "oldname"));
+            def->next = ctx->definitions;
+            ctx->definitions = def;
         }
         else if (strcmp(xamine_xml_get_node_name(elem), "import") == 0) {
         }
@@ -509,7 +512,7 @@ xamine_definition(struct xamine_conversation *conversation, unsigned char **data
                                 ? (unsigned char *) &(xamined->u.signed_value)
                                 : (unsigned char *) &(xamined->u.unsigned_value);
             unsigned char *src = *data;
-            if (definition->u.size == 1 || conversation->is_le == conversation->state->host_is_le) {
+            if (definition->u.size == 1 || conversation->is_le == conversation->ctx->host_is_le) {
                 memcpy(dest, src, definition->u.size);
             }
             else {
@@ -537,43 +540,37 @@ xamine_definition(struct xamine_conversation *conversation, unsigned char **data
 
 /********** Public functions **********/
 
-/* Initialization and cleanup */
-XAMINE_EXPORT struct xamine_state *
-xamine_init(void)
+XAMINE_EXPORT struct xamine_context *
+xamine_context_new(enum xamine_context_flags flags)
 {
     const char *xamine_path_env;
     char **xamine_path;
     char **iter;
     glob_t xml_files;
-    struct xamine_state *state;
+    struct xamine_context *ctx;
 
-    state = calloc(1, sizeof(*state));
-    if (!state)
+    if (flags & ~XAMINE_CONTEXT_NO_FLAGS)
         return NULL;
+
+    ctx = calloc(1, sizeof(*ctx));
+    ctx->refcnt = 1;
+    ctx->flags = flags;
 
     {
         unsigned long l = 1;
-        state->host_is_le = *(unsigned char*) &l;
+        ctx->host_is_le = *(unsigned char*) &l;
     }
 
     /* Add definitions of core types. */
     for (int i = 0; i < ARRAY_SIZE(core_type_definitions); i++) {
         struct xamine_definition *temp = calloc(1, sizeof(*temp));
-        if (!temp) {
-            xamine_cleanup(state);
-            return NULL;
-        }
 
         *temp = core_type_definitions[i];
 
-        temp->next = state->definitions;
-        state->definitions = temp;
+        temp->next = ctx->definitions;
+        ctx->definitions = temp;
 
         temp->name = strdup(core_type_definitions[i].name);
-        if  (!temp->name) {
-            xamine_cleanup(state);
-            return NULL;
-        }
     }
 
     /* Set up the search path for XML-XCB descriptions. */
@@ -582,26 +579,13 @@ xamine_init(void)
         xamine_path_env = XAMINE_PATH_DEFAULT;
 
     xamine_path = strsplit(xamine_path_env, XAMINE_PATH_DELIM);
-    if (!xamine_path) {
-        xamine_cleanup(state);
-        return NULL;
-    }
 
     /* Find all the XML files on the search path. */
     xml_files.gl_pathv = NULL;
     for (iter = xamine_path; *iter; iter++) {
         char *pattern = malloc(1 + strlen(*iter) + strlen(XAMINE_PATH_GLOB));
-        if (!pattern) {
-            if (xml_files.gl_pathv)
-                globfree(&xml_files);
-            strsplit_free(xamine_path);
-            xamine_cleanup(state);
-            return NULL;
-        }
-
         strcpy(pattern, *iter);
         strcat(pattern, XAMINE_PATH_GLOB);
-
         glob(pattern, (xml_files.gl_pathv ? GLOB_APPEND : 0), NULL, &xml_files);
     }
 
@@ -610,48 +594,54 @@ xamine_init(void)
     /* Parse the XML files. */
     if (xml_files.gl_pathv)
         for (iter = xml_files.gl_pathv; *iter; iter++)
-            xamine_parse_xmlxcb_file(state, *iter);
+            xamine_parse_xmlxcb_file(ctx, *iter);
 
     globfree(&xml_files);
 
-    return state;
+    return ctx;
 }
 
-XAMINE_EXPORT void
-xamine_cleanup(struct xamine_state *state)
+XAMINE_EXPORT struct xamine_context *
+xamine_context_ref(struct xamine_context *ctx)
 {
-    struct xamine_definition *temp;
-    while (state->definitions) {
-        temp = state->definitions;
-        state->definitions = state->definitions->next;
+    ctx->refcnt++;
+    return ctx;
+}
+
+XAMINE_EXPORT struct xamine_context *
+xamine_context_unref(struct xamine_context *ctx)
+{
+    if (!ctx || --ctx->refcnt > 0)
+        return ctx;
+
+    while (ctx->definitions) {
+        struct xamine_definition *temp = ctx->definitions;
+        ctx->definitions = ctx->definitions->next;
         free(temp);
     }
     /* FIXME: incomplete */
+
+    return NULL;
 }
 
 /* Retrieval of the type definitions. */
 XAMINE_EXPORT struct xamine_definition *
-xamine_get_definitions(struct xamine_state *state)
+xamine_get_definitions(struct xamine_context *ctx)
 {
-    if (!state)
-        return NULL;
-
-    return state->definitions;
+    return ctx->definitions;
 }
 
 /* Creation and destruction of conversations. */
 XAMINE_EXPORT struct xamine_conversation *
-xamine_create_conversation(struct xamine_state *state)
+xamine_create_conversation(struct xamine_context *ctx)
 {
     struct xamine_conversation *conversation;
 
     conversation = calloc(1, sizeof(*conversation));
-    if (!conversation)
-        return NULL;
 
-    conversation->state = state;
+    conversation->ctx = ctx;
     /* FIXME */
-    conversation->is_le = state->host_is_le;
+    conversation->is_le = ctx->host_is_le;
     return conversation;
 }
 
@@ -689,7 +679,7 @@ xamine(struct xamine_conversation *conversation, enum xamine_direction direction
         if (response_type == 0) {      /* Error */
             unsigned char error_code = *(data + 1);
             if (error_code < 128)
-                definition = conversation->state->core_errors[error_code];
+                definition = conversation->ctx->core_errors[error_code];
             else
                 definition = conversation->extension_errors[error_code - 128];
         }
@@ -700,7 +690,7 @@ xamine(struct xamine_conversation *conversation, enum xamine_direction direction
             /* Turn off SendEvent flag before looking up by event number. */
             unsigned char event_code = response_type & ~0x80;
             if (event_code < 64)
-                definition = conversation->state->core_events[event_code];
+                definition = conversation->ctx->core_events[event_code];
             else
                 definition = conversation->extension_events[event_code - 64];
         }
