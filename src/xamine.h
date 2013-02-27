@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2004-2005 Josh Triplett
- * 
+ *
  * This package is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by
  * the Free Software Foundation; either version 2.1 of the License, or (at
@@ -15,70 +15,70 @@
 #ifndef XAMINE_H
 #define XAMINE_H
 
-typedef enum {
-    XAMINE_BOOLEAN,
+enum xamine_type {
+    XAMINE_BOOL,
     XAMINE_CHAR,
     XAMINE_SIGNED,
     XAMINE_UNSIGNED,
     XAMINE_STRUCT,
     XAMINE_UNION,
     XAMINE_TYPEDEF
-} XamineType;
+};
 
-typedef enum {
+enum xamine_direction {
     XAMINE_REQUEST,
     XAMINE_RESPONSE
-} XamineDirection;
+};
 
-typedef struct XamineDefinition {
+struct xamine_definition {
     const char *name;
-    XamineType type;
+    enum xamine_type type;
     union {
-        unsigned int size;                    /* base types */
-        struct XamineFieldDefinition *fields; /* struct, union */
-        struct XamineDefinition *ref;         /* typedef */
+        unsigned int size;                      /* base types */
+        struct xamine_field_definition *fields; /* struct, union */
+        struct xamine_definition *ref;          /* typedef */
     } u;
-    struct XamineDefinition *next;
-} XamineDefinition;
+    struct xamine_definition *next;
+};
 
-typedef enum XamineExpressionType {
+enum xamine_expression_type {
     XAMINE_FIELDREF,
     XAMINE_VALUE,
     XAMINE_OP
-} XamineExpressionType;
+};
 
-typedef enum XamineOp {
+enum xamine_op {
     XAMINE_ADD,
     XAMINE_SUBTRACT,
     XAMINE_MULTIPLY,
     XAMINE_DIVIDE,
     XAMINE_LEFT_SHIFT,
     XAMINE_BITWISE_AND
-} XamineOp;
+};
 
-typedef struct XamineExpression {
-    XamineExpressionType type;
+struct xamine_expression {
+    enum xamine_expression_type type;
     union {
-        char *field;         /* Field name for XAMINE_FIELDREF */
-        unsigned long value; /* Value for XAMINE_VALUE */
-        struct {          /* Operator and operands for XAMINE_OP */
-            XamineOp op;
-            struct XamineExpression *left;
-            struct XamineExpression *right;
+        char *field;                        /* Field name for XAMINE_FIELDREF */
+        unsigned long value;                /* Value for XAMINE_VALUE */
+        struct {                            /* Operator and operands for XAMINE_OP */
+            enum xamine_op op;
+            struct xamine_expression *left;
+            struct xamine_expression *right;
         } op;
     } u;
-} XamineExpression;
+};
 
-typedef struct XamineFieldDefinition {
+struct xamine_field_definition {
     char *name;
-    XamineDefinition *definition;
-    XamineExpression *length;           /* List length; NULL for non-list */
-    struct XamineFieldDefinition *next;
-} XamineFieldDefinition;
+    struct xamine_definition *definition;
+    struct xamine_expression *length;       /* List length; NULL for non-list */
+    struct xamine_field_definition *next;
+};
 
-typedef struct XaminedItem {
+struct xamine_item {
     char *name;
-    XamineDefinition *definition;
+    struct xamine_definition *definition;
     unsigned int offset;
     union {
         unsigned char bool_value;
@@ -86,41 +86,41 @@ typedef struct XaminedItem {
         signed long   signed_value;
         unsigned long unsigned_value;
     } u;
-    struct XaminedItem *child;
-    struct XaminedItem *next;
-} XaminedItem;
+    struct xamine_item *child;
+    struct xamine_item *next;
+};
 
 /*
  * Opaque types for an Xamine library state and a conversation-specific
  * state.
  */
-typedef struct XamineState XamineState;
-typedef struct XamineConversation XamineConversation;
+struct xamine_state;
+struct xamine_conversation;
 
 /* Initialization and cleanup */
-XamineState *
+struct xamine_state *
 xamine_init(void);
 
 void
-xamine_cleanup(XamineState *state);
+xamine_cleanup(struct xamine_state *state);
 
 /* Retrieval of the type definitions. */
-XamineDefinition *
-xamine_get_definitions(XamineState *state);
+struct xamine_definition *
+xamine_get_definitions(struct xamine_state *state);
 
 /* Creation and destruction of conversations. */
-XamineConversation *
-xamine_create_conversation(XamineState *state);
+struct xamine_conversation *
+xamine_create_conversation(struct xamine_state *state);
 
 void
-xamine_free_conversation(XamineConversation *conversation);
+xamine_free_conversation(struct xamine_conversation *conversation);
 
 /* Analysis */
-XaminedItem *
-xamine(XamineConversation *conversation, XamineDirection dir,
+struct xamine_item *
+xamine(struct xamine_conversation *conversation, enum xamine_direction direction,
        unsigned char *data, unsigned int size);
 
 void
-xamine_free(XaminedItem *item);
+xamine_free(struct xamine_item *item);
 
 #endif /* XAMINE_H */
