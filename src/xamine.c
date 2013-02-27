@@ -447,7 +447,7 @@ xamine_field_definition(struct xamine_conversation *conversation, const unsigned
 
     if (field->length) {
         struct xamine_item **end;
-        unsigned long length;
+        size_t length;
 
         item = calloc(1, sizeof(*item));
         item->name = field->name;
@@ -456,7 +456,7 @@ xamine_field_definition(struct xamine_conversation *conversation, const unsigned
 
         end = &item->child;
         length = xamine_evaluate_expression(field->length, parent);
-        for (unsigned long i = 0; i < length; i++) {
+        for (size_t i = 0; i < length; i++) {
             *end = xamine_definition(conversation, data, size, offset, field->definition, parent);
             (*end)->name = malloc(23); /* '[', length of 2**64, ']', '\0' */
             sprintf((*end)->name, "[%lu]", i);

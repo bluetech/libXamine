@@ -29,7 +29,7 @@ struct xamine_definition {
     const char *name;
     enum xamine_type type;
     union {
-        unsigned int size;                      /* base types */
+        size_t size;                            /* base types */
         struct xamine_field_definition *fields; /* struct, union */
         struct xamine_definition *ref;          /* typedef */
     } u;
@@ -114,7 +114,7 @@ xamine_conversation_unref(struct xamine_conversation *conversation);
 struct xamine_item {
     char *name;
     struct xamine_definition *definition;
-    unsigned int offset;
+    size_t offset;
     union {
         unsigned char bool_value;
         char          char_value;
