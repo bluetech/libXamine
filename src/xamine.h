@@ -25,11 +25,6 @@ enum xamine_type {
     XAMINE_TYPEDEF
 };
 
-enum xamine_direction {
-    XAMINE_REQUEST,
-    XAMINE_RESPONSE
-};
-
 struct xamine_definition {
     const char *name;
     enum xamine_type type;
@@ -76,20 +71,6 @@ struct xamine_field_definition {
     struct xamine_field_definition *next;
 };
 
-struct xamine_item {
-    char *name;
-    struct xamine_definition *definition;
-    unsigned int offset;
-    union {
-        unsigned char bool_value;
-        char          char_value;
-        signed long   signed_value;
-        unsigned long unsigned_value;
-    } u;
-    struct xamine_item *child;
-    struct xamine_item *next;
-};
-
 /* Context */
 
 struct xamine_context;
@@ -130,11 +111,31 @@ xamine_conversation_unref(struct xamine_conversation *conversation);
 
 /* Analysis */
 
+struct xamine_item {
+    char *name;
+    struct xamine_definition *definition;
+    unsigned int offset;
+    union {
+        unsigned char bool_value;
+        char          char_value;
+        signed long   signed_value;
+        unsigned long unsigned_value;
+    } u;
+    struct xamine_item *child;
+    struct xamine_item *next;
+};
+
+enum xamine_direction {
+    XAMINE_REQUEST,
+    XAMINE_RESPONSE
+};
+
 struct xamine_item *
-xamine(struct xamine_conversation *conversation, enum xamine_direction direction,
-       unsigned char *data, unsigned int size);
+xamine_examine(struct xamine_conversation *conversation,
+               enum xamine_direction direction,
+               const void *data, size_t size);
 
 void
-xamine_free(struct xamine_item *item);
+xamine_item_free(struct xamine_item *item);
 
 #endif /* XAMINE_H */

@@ -434,27 +434,27 @@ xamine_evaluate_expression(struct xamine_expression *expression, struct xamine_i
 }
 
 static struct xamine_item *
-xamine_definition(struct xamine_conversation *conversation, unsigned char **data,
-                  unsigned int *size, unsigned int *offset,
+xamine_definition(struct xamine_conversation *conversation, const unsigned char **data,
+                  size_t *size, size_t *offset,
                   struct xamine_definition *definition, struct xamine_item *parent);
 
 static struct xamine_item *
-xamine_field_definition(struct xamine_conversation *conversation, unsigned char **data,
-                        unsigned int *size, unsigned int *offset,
+xamine_field_definition(struct xamine_conversation *conversation, const unsigned char **data,
+                        size_t *size, size_t *offset,
                         struct xamine_field_definition *field, struct xamine_item *parent)
 {
-    struct xamine_item *xamined;
+    struct xamine_item *item;
 
     if (field->length) {
         struct xamine_item **end;
         unsigned long length;
 
-        xamined = calloc(1, sizeof(*xamined));
-        xamined->name = field->name;
-        xamined->definition = field->definition;
-        xamined->offset = *offset;
+        item = calloc(1, sizeof(*item));
+        item->name = field->name;
+        item->definition = field->definition;
+        item->offset = *offset;
 
-        end = &(xamined->child);
+        end = &item->child;
         length = xamine_evaluate_expression(field->length, parent);
         for (unsigned long i = 0; i < length; i++) {
             *end = xamine_definition(conversation, data, size, offset, field->definition, parent);
@@ -465,33 +465,34 @@ xamine_field_definition(struct xamine_conversation *conversation, unsigned char 
         *end = NULL;
     }
     else {
-        xamined = xamine_definition(conversation, data, size, offset, field->definition, parent);
-        xamined->name = field->name;
+        item = xamine_definition(conversation, data, size, offset, field->definition, parent);
+        item->name = field->name;
     }
 
-    return xamined;
+    return item;
 }
 
 static struct xamine_item *
-xamine_definition(struct xamine_conversation *conversation, unsigned char **data,
-                  unsigned int *size, unsigned int *offset,
-                  struct xamine_definition *definition, struct xamine_item *parent)
+xamine_definition(const struct xamine_conversation *conversation,
+                  const unsigned char **data, size_t *size, size_t *offset,
+                  const struct xamine_definition *definition,
+                  struct xamine_item *parent)
 {
-    struct xamine_item *xamined;
+    struct xamine_item *item;
 
     if (definition->type == XAMINE_TYPEDEF) {
-        xamined = xamine_definition(conversation, data, size, offset, definition->u.ref, parent);
-        xamined->definition = definition;
-        return xamined;
+        item = xamine_definition(conversation, data, size, offset, definition->u.ref, parent);
+        item->definition = definition;
+        return item;
     }
 
-    xamined = calloc(1, sizeof(*xamined));
-    xamined->definition = definition;
+    item = calloc(1, sizeof(*item));
+    item->definition = definition;
     if (definition->type == XAMINE_STRUCT) {
-        struct xamine_item **end = &xamined->child;
+        struct xamine_item **end = &item->child;
 
         for (struct xamine_field_definition *child = definition->u.fields; child; child = child->next) {
-            *end = xamine_field_definition(conversation, data, size, offset, child, xamined);
+            *end = xamine_field_definition(conversation, data, size, offset, child, item);
             end = &((*end)->next);
         }
         *end = NULL;
@@ -500,21 +501,21 @@ xamine_definition(struct xamine_conversation *conversation, unsigned char **data
         switch (definition->type) {
         case XAMINE_BOOL:
             /* FIXME: field->definition->size must be 1 */
-            xamined->u.bool_value = *(unsigned char*) (*data) ? 1 : 0;
+            item->u.bool_value = *(const unsigned char *) (*data) ? 1 : 0;
             break;
 
         case XAMINE_CHAR:
             /* FIXME: field->definition->size must be 1 */
-            xamined->u.char_value = *(char *) (*data);
+            item->u.char_value = *(const char *) (*data);
             break;
 
         case XAMINE_SIGNED:
         case XAMINE_UNSIGNED:
         {
             unsigned char *dest = definition->type == XAMINE_SIGNED
-                                ? (unsigned char *) &(xamined->u.signed_value)
-                                : (unsigned char *) &(xamined->u.unsigned_value);
-            unsigned char *src = *data;
+                                ? (unsigned char *) &(item->u.signed_value)
+                                : (unsigned char *) &(item->u.unsigned_value);
+            const unsigned char *src = *data;
             if (definition->u.size == 1 || conversation->is_le == conversation->ctx->host_is_le) {
                 memcpy(dest, src, definition->u.size);
             }
@@ -538,7 +539,7 @@ xamine_definition(struct xamine_conversation *conversation, unsigned char **data
         *offset += definition->u.size;
     }
 
-    return xamined;
+    return item;
 }
 
 /********** Public functions **********/
@@ -675,10 +676,11 @@ xamine_conversation_unref(struct xamine_conversation *conversation)
 /* Analysis */
 XAMINE_EXPORT struct xamine_item *
 xamine(struct xamine_conversation *conversation, enum xamine_direction direction,
-       unsigned char *data, unsigned int size)
+       const void *data_void, size_t size)
 {
     struct xamine_definition *definition = NULL;
-    unsigned int offset = 0;
+    size_t offset = 0;
+    const unsigned char *data = data_void;
 
     if (direction == XAMINE_REQUEST) {
         /* Request layout:
@@ -725,11 +727,12 @@ xamine(struct xamine_conversation *conversation, enum xamine_direction direction
 }
 
 XAMINE_EXPORT void
-xamine_free(struct xamine_item *item)
+xamine_item_free(struct xamine_item *item)
 {
-    if (item) {
-        xamine_free(item->child);
-        xamine_free(item->next);
-        free(item);
-    }
+    if (!item)
+        return;
+
+    xamine_item_free(item->child);
+    xamine_item_free(item->next);
+    free(item);
 }
