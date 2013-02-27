@@ -29,6 +29,8 @@
 # define XAMINE_EXPORT
 #endif
 
+#define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(*arr))
+
 const char *XAMINE_PATH_DEFAULT = "/usr/share/xcb";
 const char *XAMINE_PATH_DELIM = ":";
 const char *XAMINE_PATH_GLOB = "/*.xml";
@@ -539,7 +541,6 @@ xamine_definition(XamineConversation *conversation, unsigned char **data,
 XAMINE_EXPORT XamineState *
 xamine_init(void)
 {
-    int i;
     const char *xamine_path_env;
     char **xamine_path;
     char **iter;
@@ -556,7 +557,7 @@ xamine_init(void)
     }
 
     /* Add definitions of core types. */
-    for (i = 0; i < sizeof(core_type_definitions) / sizeof(XamineDefinition); i++) {
+    for (int i = 0; i < ARRAY_SIZE(core_type_definitions); i++) {
         XamineDefinition *temp = calloc(1, sizeof(XamineDefinition));
         if (!temp) {
             xamine_cleanup(state);
