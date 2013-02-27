@@ -186,7 +186,11 @@ xamine_parse_fields(XamineState *state, xmlNode *elem)
     XamineFieldDefinition **tail = &head;
 
     for (cur = elem->children; cur; cur = xamine_xml_next_elem(cur->next)) {
-        /* FIXME: handle elements other than "field", "pad", and "list". */
+        /* FIXME: handle elements other than "field", "pad", "doc" and "list". */
+
+        if (strcmp(xamine_xml_get_node_name(cur), "doc") == 0)
+            continue;
+
         *tail = calloc(1, sizeof(XamineFieldDefinition));
         if (strcmp(xamine_xml_get_node_name(cur), "pad") == 0) {
             (*tail)->name = strdup("pad");
