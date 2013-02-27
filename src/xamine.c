@@ -78,18 +78,6 @@ struct xamine_conversation {
     struct xamine_extension *extensions[128];        /* Extensions 128-255       */
 };
 
-static const struct xamine_definition core_type_definitions[] = {
-    { "char",   XAMINE_CHAR,     { 1 } },
-    { "BOOL",   XAMINE_BOOL,     { 1 } },
-    { "BYTE",   XAMINE_UNSIGNED, { 1 } },
-    { "CARD8",  XAMINE_UNSIGNED, { 1 } },
-    { "CARD16", XAMINE_UNSIGNED, { 2 } },
-    { "CARD32", XAMINE_UNSIGNED, { 4 } },
-    { "INT8",   XAMINE_SIGNED,   { 1 } },
-    { "INT16",  XAMINE_SIGNED,   { 2 } },
-    { "INT32",  XAMINE_SIGNED,   { 4 } },
-};
-
 /********** Private functions **********/
 
 /* Helper function to avoid casting. */
@@ -552,6 +540,21 @@ xamine_context_new(enum xamine_context_flags flags)
     char **iter;
     glob_t xml_files;
     struct xamine_context *ctx;
+    static const struct {
+        const char *name;
+        enum xamine_type type;
+        size_t size;
+    } core_types[] = {
+        { "char",   XAMINE_CHAR,     1 },
+        { "BOOL",   XAMINE_BOOL,     1 },
+        { "BYTE",   XAMINE_UNSIGNED, 1 },
+        { "CARD8",  XAMINE_UNSIGNED, 1 },
+        { "CARD16", XAMINE_UNSIGNED, 2 },
+        { "CARD32", XAMINE_UNSIGNED, 4 },
+        { "INT8",   XAMINE_SIGNED,   1 },
+        { "INT16",  XAMINE_SIGNED,   2 },
+        { "INT32",  XAMINE_SIGNED,   4 },
+    };
 
     if (flags & ~XAMINE_CONTEXT_NO_FLAGS)
         return NULL;
@@ -566,15 +569,15 @@ xamine_context_new(enum xamine_context_flags flags)
     }
 
     /* Add definitions of core types. */
-    for (int i = 0; i < ARRAY_SIZE(core_type_definitions); i++) {
+    for (int i = 0; i < ARRAY_SIZE(core_types); i++) {
         struct xamine_definition *temp = calloc(1, sizeof(*temp));
 
-        *temp = core_type_definitions[i];
+        temp->name = strdup(core_types[i].name);
+        temp->type = core_types[i].type;
+        temp->u.size = core_types[i].size;
 
         temp->next = ctx->definitions;
         ctx->definitions = temp;
-
-        temp->name = strdup(core_type_definitions[i].name);
     }
 
     /* Set up the search path for XML-XCB descriptions. */

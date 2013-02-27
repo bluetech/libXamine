@@ -26,7 +26,7 @@ enum xamine_type {
 };
 
 struct xamine_definition {
-    const char *name;
+    char *name;
     enum xamine_type type;
     union {
         size_t size;                            /* base types */
