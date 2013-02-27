@@ -69,6 +69,9 @@ struct xamine_context {
 
 struct xamine_conversation {
     struct xamine_context *ctx;
+    int refcnt;
+    enum xamine_conversation_flags flags;
+
     unsigned char is_le;
     struct xamine_definition *extension_events[64];  /* Extension events 64-127  */
     struct xamine_definition *extension_errors[128]; /* Extension errors 128-255 */
@@ -631,24 +634,42 @@ xamine_get_definitions(struct xamine_context *ctx)
     return ctx->definitions;
 }
 
-/* Creation and destruction of conversations. */
 XAMINE_EXPORT struct xamine_conversation *
-xamine_create_conversation(struct xamine_context *ctx)
+xamine_conversation_new(struct xamine_context *ctx,
+                        enum xamine_conversation_flags flags)
 {
     struct xamine_conversation *conversation;
 
-    conversation = calloc(1, sizeof(*conversation));
+    if (flags & ~XAMINE_CONVERSATION_NO_FLAGS)
+        return NULL;
 
-    conversation->ctx = ctx;
+    conversation = calloc(1, sizeof(*conversation));
+    conversation->refcnt = 1;
+    conversation->flags = flags;
+    conversation->ctx = xamine_context_ref(ctx);
+
     /* FIXME */
     conversation->is_le = ctx->host_is_le;
+
     return conversation;
 }
 
-XAMINE_EXPORT void
-xamine_free_conversation(struct xamine_conversation *conversation)
+XAMINE_EXPORT struct xamine_conversation *
+xamine_conversation_ref(struct xamine_conversation *conversation)
 {
+    conversation->refcnt++;
+    return conversation;
+}
+
+XAMINE_EXPORT struct xamine_conversation *
+xamine_conversation_unref(struct xamine_conversation *conversation)
+{
+    if (!conversation || --conversation->refcnt > 0)
+        return conversation;
+
+    xamine_context_unref(conversation->ctx);
     free(conversation);
+    return NULL;
 }
 
 /* Analysis */

@@ -114,13 +114,22 @@ xamine_get_definitions(struct xamine_context *state);
 
 struct xamine_conversation;
 
-struct xamine_conversation *
-xamine_create_conversation(struct xamine_context *context);
+enum xamine_conversation_flags {
+    XAMINE_CONVERSATION_NO_FLAGS = 0
+};
 
-void
-xamine_free_conversation(struct xamine_conversation *conversation);
+struct xamine_conversation *
+xamine_conversation_new(struct xamine_context *context,
+                        enum xamine_conversation_flags flags);
+
+struct xamine_conversation *
+xamine_conversation_ref(struct xamine_conversation *conversation);
+
+struct xamine_conversation *
+xamine_conversation_unref(struct xamine_conversation *conversation);
 
 /* Analysis */
+
 struct xamine_item *
 xamine(struct xamine_conversation *conversation, enum xamine_direction direction,
        unsigned char *data, unsigned int size);
