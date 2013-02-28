@@ -198,9 +198,6 @@ xamine_parse_xmlxcb_file(struct xamine_context *ctx,
     char *extension_xname;
     struct xamine_extension *extension = NULL;
 
-    /* FIXME: Remove this. */
-    printf("DEBUG: Parsing file \"%s\"\n", filename);
-
     /* Ignore text nodes consisting entirely of whitespace. */
     xmlKeepBlanksDefault(0);
 
@@ -214,9 +211,6 @@ xamine_parse_xmlxcb_file(struct xamine_context *ctx,
 
     extension_xname = xamine_xml_get_prop(root, "extension-xname");
     if (extension_xname) {
-        /* FIXME: Remove this. */
-        printf("Extension: %s\n", extension_xname);
-
         for (extension = ctx->extensions; extension; extension = extension->next)
             if (streq(extension->xname, extension_xname))
                 break;
@@ -229,20 +223,8 @@ xamine_parse_xmlxcb_file(struct xamine_context *ctx,
             ctx->extensions = extension;
         }
     }
-    else {
-        /* FIXME: Remove this. */
-        printf("Core Protocol\n");
-    }
 
     for (elem = root->children; elem; elem = xamine_xml_next_elem(elem->next)) {
-        /* FIXME: Remove this */
-        {
-            char *name = xamine_xml_get_prop(elem, "name");
-            printf("DEBUG:    Parsing element \"%s\", name=\"%s\"\n",
-                   xamine_xml_get_node_name(elem),
-                   name ? name : "<not present>");
-        }
-
         if (streq(xamine_xml_get_node_name(elem), "request")) {
             /* Not yet implemented. */
         }
