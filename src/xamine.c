@@ -38,13 +38,13 @@ const char *XAMINE_PATH_GLOB = "/*.xml";
 /* Concrete definitions for opaque and private structure types. */
 struct xamine_event {
     unsigned char number;
-    struct xamine_definition *definition;
+    const struct xamine_definition *definition;
     struct xamine_event *next;
 };
 
 struct xamine_error {
     unsigned char number;
-    struct xamine_definition *definition;
+    const struct xamine_definition *definition;
     struct xamine_error *next;
 };
 
@@ -126,11 +126,11 @@ xamine_make_name(struct xamine_extension *extension, char *name)
     }
 }
 
-static struct xamine_definition *
+static const struct xamine_definition *
 xamine_find_type(struct xamine_context *ctx, const char *name)
 {
     /* FIXME: does not work for extension types. */
-    for (struct xamine_definition *def = ctx->definitions; def; def = def->next)
+    for (const struct xamine_definition *def = ctx->definitions; def; def = def->next)
         if (strcmp(def->name, name) == 0)
             return def;
     return NULL;
@@ -210,7 +210,8 @@ xamine_parse_fields(struct xamine_context *ctx, xmlNode *elem)
 }
 
 static void
-xamine_parse_xmlxcb_file(struct xamine_context *ctx, char *filename)
+xamine_parse_xmlxcb_file(struct xamine_context *ctx,
+                         const char *filename)
 {
     xmlDoc *doc;
     xmlNode *root, *elem;
@@ -375,7 +376,8 @@ xamine_parse_xmlxcb_file(struct xamine_context *ctx, char *filename)
 }
 
 static long
-xamine_evaluate_expression(struct xamine_expression *expression, struct xamine_item *parent)
+xamine_evaluate_expression(const struct xamine_expression *expression,
+                           const struct xamine_item *parent)
 {
     switch (expression->type) {
     case XAMINE_VALUE:
@@ -422,14 +424,16 @@ xamine_evaluate_expression(struct xamine_expression *expression, struct xamine_i
 }
 
 static struct xamine_item *
-xamine_definition(struct xamine_conversation *conversation, const unsigned char **data,
-                  size_t *size, size_t *offset,
-                  struct xamine_definition *definition, struct xamine_item *parent);
+xamine_definition(const struct xamine_conversation *conversation,
+                  const unsigned char **data, size_t *size, size_t *offset,
+                  const struct xamine_definition *definition,
+                  const struct xamine_item *parent);
 
 static struct xamine_item *
-xamine_field_definition(struct xamine_conversation *conversation, const unsigned char **data,
-                        size_t *size, size_t *offset,
-                        struct xamine_field_definition *field, struct xamine_item *parent)
+xamine_field_definition(const struct xamine_conversation *conversation,
+                        const unsigned char **data, size_t *size, size_t *offset,
+                        const struct xamine_field_definition *field,
+                        const struct xamine_item *parent)
 {
     struct xamine_item *item;
 
@@ -464,7 +468,7 @@ static struct xamine_item *
 xamine_definition(const struct xamine_conversation *conversation,
                   const unsigned char **data, size_t *size, size_t *offset,
                   const struct xamine_definition *definition,
-                  struct xamine_item *parent)
+                  const struct xamine_item *parent)
 {
     struct xamine_item *item;
 
@@ -631,8 +635,7 @@ xamine_context_unref(struct xamine_context *ctx)
     return NULL;
 }
 
-/* Retrieval of the type definitions. */
-XAMINE_EXPORT struct xamine_definition *
+XAMINE_EXPORT const struct xamine_definition *
 xamine_get_definitions(struct xamine_context *ctx)
 {
     return ctx->definitions;
@@ -676,12 +679,12 @@ xamine_conversation_unref(struct xamine_conversation *conversation)
     return NULL;
 }
 
-/* Analysis */
 XAMINE_EXPORT struct xamine_item *
-xamine(struct xamine_conversation *conversation, enum xamine_direction direction,
-       const void *data_void, size_t size)
+xamine_examine(const struct xamine_conversation *conversation,
+               enum xamine_direction direction,
+               const void *data_void, size_t size)
 {
-    struct xamine_definition *definition = NULL;
+    const struct xamine_definition *definition = NULL;
     size_t offset = 0;
     const unsigned char *data = data_void;
 
@@ -714,7 +717,7 @@ xamine(struct xamine_conversation *conversation, enum xamine_direction direction
         }
         else {                        /* Event */
             /* Turn off SendEvent flag before looking up by event number. */
-            unsigned char event_code = response_type & ~0x80;
+            const unsigned char event_code = response_type & ~0x80;
             if (event_code < 64)
                 definition = conversation->ctx->core_events[event_code];
             else

@@ -31,9 +31,16 @@ struct xamine_definition {
     union {
         size_t size;                            /* base types */
         struct xamine_field_definition *fields; /* struct, union */
-        struct xamine_definition *ref;          /* typedef */
+        const struct xamine_definition *ref;    /* typedef */
     } u;
     struct xamine_definition *next;
+};
+
+struct xamine_field_definition {
+    char *name;
+    const struct xamine_definition *definition;
+    struct xamine_expression *length;       /* List length; NULL for non-list */
+    struct xamine_field_definition *next;
 };
 
 enum xamine_expression_type {
@@ -64,13 +71,6 @@ struct xamine_expression {
     } u;
 };
 
-struct xamine_field_definition {
-    char *name;
-    struct xamine_definition *definition;
-    struct xamine_expression *length;       /* List length; NULL for non-list */
-    struct xamine_field_definition *next;
-};
-
 /* Context */
 
 struct xamine_context;
@@ -88,7 +88,7 @@ xamine_context_ref(struct xamine_context *context);
 struct xamine_context *
 xamine_context_unref(struct xamine_context *context);
 
-struct xamine_definition *
+const struct xamine_definition *
 xamine_get_definitions(struct xamine_context *state);
 
 /* Conversation */
@@ -113,7 +113,7 @@ xamine_conversation_unref(struct xamine_conversation *conversation);
 
 struct xamine_item {
     char *name;
-    struct xamine_definition *definition;
+    const struct xamine_definition *definition;
     size_t offset;
     union {
         unsigned char bool_value;
@@ -131,7 +131,7 @@ enum xamine_direction {
 };
 
 struct xamine_item *
-xamine_examine(struct xamine_conversation *conversation,
+xamine_examine(const struct xamine_conversation *conversation,
                enum xamine_direction direction,
                const void *data, size_t size);
 
