@@ -15,8 +15,8 @@ include_HEADERS = \
 
 libXamine_la_SOURCES = \
 	src/xamine.c \
-	src/strsplit.c \
-	src/strsplit.h
+	src/utils.c \
+	src/utils.h
 
 libXamine_la_CFLAGS = $(AM_CFLAGS) $(LIBXML_CFLAGS)
 libXamine_la_LIBADD = $(LIBXML_LIBS)

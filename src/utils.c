@@ -12,10 +12,24 @@
  * License for more details.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-#include "strsplit.h"
+#include "utils.h"
+
+char *
+afmt(const char *fmt, ...)
+{
+    va_list args;
+    char *str;
+    int ret;
+
+    va_start(args, fmt);
+    ret = vasprintf(&str, fmt, args);
+    va_end(args);
+
+    return ret >= 0 ? str : NULL;
+}
 
 char **
 strsplit(const char *input, const char *delim)
